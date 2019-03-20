@@ -4,8 +4,7 @@
   "main": "index.js",
   "license": "MIT",
   "scripts": {
-    "prepare": "rollup --config",
-    "prestart": "yarn run prepare",
+    "prestart": "rollup --config",
     "start": "node index.js"
   },
   "dependencies": {
