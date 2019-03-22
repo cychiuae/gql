@@ -4,9 +4,9 @@ services:
   postgres:
     image: postgres:9.6-alpine
     environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: mydb
+      POSTGRES_USER: "${PGUSER}"
+      POSTGRES_PASSWORD: "${PGPASSWORD}"
+      POSTGRES_DB: "${PGDATABASE}"
     volumes:
     - dbdata:/var/lib/postgresql/data
     - ./init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -17,6 +17,8 @@ services:
       context: .
     ports:
     - "3000:3000"
+    env_file:
+    - ./.env
 
 volumes:
   dbdata:
