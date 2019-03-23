@@ -8,6 +8,7 @@ export interface Context {
 export interface SignupInput {
   username: string;
   password: string;
+  name: string;
 }
 
 export interface LoginInput {

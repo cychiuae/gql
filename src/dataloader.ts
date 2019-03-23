@@ -44,7 +44,7 @@ async function loadSelfUsers(
   console.log("louis#loadSelfUsers", keys);
   const { client } = options;
   const { sql, bindings } = knex
-    .select("id", "username")
+    .select("id", "username", "name")
     .from("user")
     .whereIn("id", keys)
     .toSQL()

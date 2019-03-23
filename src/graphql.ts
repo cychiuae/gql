@@ -23,8 +23,13 @@ import {
 
 export const schema = buildSchema(schemaString);
 
-async function signup(args: SignupInput, context: Context): Promise<SelfUser> {
-  const { username, password } = args;
+async function signup(
+  args: { input: SignupInput },
+  context: Context
+): Promise<SelfUser> {
+  const {
+    input: { username, password, name },
+  } = args;
   const { req, res } = context;
   ensureNoAccessToken(req, res);
   const userId = ulid();
@@ -36,6 +41,7 @@ async function signup(args: SignupInput, context: Context): Promise<SelfUser> {
         id: userId,
         username,
         password: hashed,
+        name,
       })
       .toSQL()
       .toNative();

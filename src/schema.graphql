@@ -1,16 +1,24 @@
 type SelfUser {
   id: ID!
   username: String!
+  name: String!
 }
 
 type User {
   id: ID!
+  name: String!
 }
 
 type Post {
   id: ID!
   author: User!
   content: String!
+}
+
+input SignupInput {
+  username: String!
+  password: String!
+  name: String!
 }
 
 type Query {
@@ -20,7 +28,7 @@ type Query {
 }
 
 type Mutation {
-  signup(username: String!, password: String!): SelfUser!
+  signup(input: SignupInput!): SelfUser!
   login(username: String!, password: String!): SelfUser!
 
   createPost(content: String!): Post!
