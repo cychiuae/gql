@@ -1,4 +1,5 @@
 import { Pool, PoolClient } from "pg";
+import knex_ from "knex";
 
 const pool = new Pool();
 
@@ -18,3 +19,5 @@ export async function inTxn<T>(
     client.release();
   }
 }
+
+export const knex = knex_({ client: "pg" });
