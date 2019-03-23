@@ -145,10 +145,29 @@ async function getMyPosts(_args: never, context: Context): Promise<Post[]> {
   return posts;
 }
 
+async function getAllPosts(_args: never, context: Context): Promise<Post[]> {
+  const { req } = context;
+  const userId = await ensureUserId(req);
+  const posts = await inTxn(async client => {
+    const { sql, bindings } = knex
+      .select("id")
+      .from("post")
+      .orderBy("id", "desc")
+      .toSQL()
+      .toNative();
+    const { rows } = await client.query(sql, bindings);
+    const ids = rows.map(row => row.id);
+    const { postLoader } = makeLoaders({ userId, client });
+    return postLoader.loadMany(ids);
+  });
+  return posts;
+}
+
 export const rootValue = {
   signup,
   login,
   getSelf,
   createPost,
   getMyPosts,
+  getAllPosts,
 };

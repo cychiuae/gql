@@ -23,8 +23,8 @@ input SignupInput {
 
 type Query {
   getSelf: SelfUser
-
   getMyPosts: [Post!]!
+  getAllPosts: [Post!]!
 }
 
 type Mutation {
