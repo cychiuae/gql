@@ -4,6 +4,7 @@ import { ulid } from "ulid";
 import schemaString from "./schema.graphql";
 import {
   ensureNoAccessToken,
+  ensureUserId,
   writeAccessToken,
   readAccessTokenFromRequest,
 } from "./express";
@@ -11,7 +12,14 @@ import { inTxn, knex } from "./db";
 import { hashPassword, comparePassword } from "./password";
 import { makeToken, extractUserId } from "./jwt";
 import { makeLoaders } from "./dataloader";
-import { SignupInput, LoginInput, Context, SelfUser } from "./types";
+import {
+  SignupInput,
+  LoginInput,
+  Context,
+  SelfUser,
+  CreatePostInput,
+  Post,
+} from "./types";
 
 export const schema = buildSchema(schemaString);
 
@@ -86,8 +94,55 @@ async function getSelf(
   return selfUser;
 }
 
+async function createPost(
+  args: CreatePostInput,
+  context: Context
+): Promise<Post> {
+  const { content } = args;
+  const { req } = context;
+  const userId = await ensureUserId(req);
+  const post = await inTxn(async client => {
+    const postId = ulid();
+    const { sql, bindings } = knex("post")
+      .insert({
+        id: postId,
+        author_id: userId,
+        content,
+      })
+      .toSQL()
+      .toNative();
+    await client.query(sql, bindings);
+    const { postLoader } = makeLoaders({ userId, client });
+    return postLoader.load(postId);
+  });
+  return post;
+}
+
+async function getMyPosts(_args: never, context: Context): Promise<Post[]> {
+  const { req } = context;
+  const userId = await ensureUserId(req);
+  const posts = await inTxn(async client => {
+    const { sql, bindings } = knex
+      .select("id")
+      .from("post")
+      .where({
+        author_id: userId,
+      })
+      .orderBy("id", "desc")
+      .toSQL()
+      .toNative();
+    const { rows } = await client.query(sql, bindings);
+    const ids = rows.map(row => row.id);
+    const { postLoader } = makeLoaders({ userId, client });
+    return postLoader.loadMany(ids);
+  });
+  return posts;
+}
+
 export const rootValue = {
   signup,
   login,
   getSelf,
+  createPost,
+  getMyPosts,
 };

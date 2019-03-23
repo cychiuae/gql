@@ -1,15 +1,20 @@
 import DataLoader from "dataloader";
 import { PoolClient } from "pg";
 import { knex } from "./db";
-import { SelfUser } from "./types";
+import { props } from "./promise";
+import { SelfUser, Post } from "./types";
 
 interface Options {
   userId: string;
   client: PoolClient;
 }
 
+type SelfUserLoader = DataLoader<string, SelfUser>;
+type PostLoader = DataLoader<string, Post>;
+
 interface Loaders {
-  selfUserLoader: DataLoader<string, SelfUser>;
+  selfUserLoader: SelfUserLoader;
+  postLoader: PostLoader;
 }
 
 function makeOutput<T, K extends keyof T>(
@@ -36,6 +41,7 @@ async function loadSelfUsers(
   keys: string[],
   options: Options
 ): Promise<SelfUser[]> {
+  console.log("louis#loadSelfUsers", keys);
   const { client } = options;
   const { sql, bindings } = knex
     .select("id", "username")
@@ -48,10 +54,48 @@ async function loadSelfUsers(
   return output;
 }
 
+async function loadPosts(
+  keys: string[],
+  options: Options,
+  selfUserLoader: SelfUserLoader
+): Promise<Post[]> {
+  console.log("louis#loadPosts", keys);
+  const { client } = options;
+  const { sql, bindings } = knex
+    .select("id", "author_id", "content")
+    .from("post")
+    .whereIn("id", keys)
+    .toSQL()
+    .toNative();
+  const { rows } = await client.query(sql, bindings);
+  const postRows: {
+    id: string;
+    author_id: string;
+    content: string;
+  }[] = makeOutput("id", keys, rows);
+
+  return Promise.all(
+    postRows.map(postRow => {
+      return props({
+        id: postRow.id,
+        content: postRow.content,
+        author: () => {
+          return selfUserLoader.load(postRow.author_id);
+        },
+      });
+    })
+  );
+}
+
 export function makeLoaders(options: Options): Loaders {
+  const selfUserLoader: SelfUserLoader = new DataLoader(keys => {
+    return loadSelfUsers(keys, options);
+  });
+  const postLoader: PostLoader = new DataLoader(keys => {
+    return loadPosts(keys, options, selfUserLoader);
+  });
   return {
-    selfUserLoader: new DataLoader(keys => {
-      return loadSelfUsers(keys, options);
-    }),
+    selfUserLoader,
+    postLoader,
   };
 }

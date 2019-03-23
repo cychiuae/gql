@@ -1,4 +1,5 @@
 import { Request, Response, RequestHandler, NextFunction } from "express";
+import { extractUserId } from "./jwt";
 
 const ACCESS_TOKEN = "access_token";
 
@@ -59,4 +60,13 @@ export function ensureNoAccessToken(req: Request, res: Response) {
     });
     throw new Error("unexpected access token");
   }
+}
+
+export async function ensureUserId(req: Request): Promise<string> {
+  const token = readAccessTokenFromRequest(req);
+  if (token == null) {
+    throw new Error("unauthenticated");
+  }
+  const userId = await extractUserId(token);
+  return userId;
 }

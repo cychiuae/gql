@@ -3,11 +3,25 @@ type SelfUser {
   username: String!
 }
 
+type User {
+  id: ID!
+}
+
+type Post {
+  id: ID!
+  author: User!
+  content: String!
+}
+
 type Query {
   getSelf: SelfUser
+
+  getMyPosts: [Post!]!
 }
 
 type Mutation {
   signup(username: String!, password: String!): SelfUser!
   login(username: String!, password: String!): SelfUser!
+
+  createPost(content: String!): Post!
 }

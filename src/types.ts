@@ -16,5 +16,20 @@ export interface LoginInput {
 }
 
 export interface SelfUser {
+  id: string;
   username: string;
+}
+
+export interface User {
+  id: string;
+}
+
+export interface CreatePostInput {
+  content: string;
+}
+
+export interface Post {
+  id: string;
+  author: () => Promise<User>;
+  content: string;
 }
