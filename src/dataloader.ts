@@ -11,6 +11,7 @@ interface Options {
 
 type SelfUserLoader = DataLoader<string, SelfUser>;
 type PostLoader = DataLoader<string, Post>;
+type PostLikedLoader = DataLoader<string, boolean>;
 
 interface Loaders {
   selfUserLoader: SelfUserLoader;
@@ -54,10 +55,35 @@ async function loadSelfUsers(
   return output;
 }
 
+async function loadPostLikeds(
+  keys: string[],
+  options: Options
+): Promise<boolean[]> {
+  console.log("louis#loadPostLikeds", keys);
+  const { userId, client } = options;
+  const { sql, bindings } = knex
+    .select("post_id")
+    .from("user_likes_post")
+    .whereIn("post_id", keys)
+    .where({
+      user_id: userId,
+    })
+    .toSQL()
+    .toNative();
+  const { rows } = await client.query(sql, bindings);
+  const output: ({ post_id: string } | null)[] = makeOutput(
+    "post_id",
+    keys,
+    rows
+  );
+  return output.map(a => (a == null ? false : true));
+}
+
 async function loadPosts(
   keys: string[],
   options: Options,
-  selfUserLoader: SelfUserLoader
+  selfUserLoader: SelfUserLoader,
+  postLikedLoader: PostLikedLoader
 ): Promise<Post[]> {
   console.log("louis#loadPosts", keys);
   const { client } = options;
@@ -82,6 +108,9 @@ async function loadPosts(
         author: () => {
           return selfUserLoader.load(postRow.author_id);
         },
+        liked: () => {
+          return postLikedLoader.load(postRow.id);
+        },
       });
     })
   );
@@ -91,8 +120,11 @@ export function makeLoaders(options: Options): Loaders {
   const selfUserLoader: SelfUserLoader = new DataLoader(keys => {
     return loadSelfUsers(keys, options);
   });
+  const postLikedLoader: PostLikedLoader = new DataLoader(keys => {
+    return loadPostLikeds(keys, options);
+  });
   const postLoader: PostLoader = new DataLoader(keys => {
-    return loadPosts(keys, options, selfUserLoader);
+    return loadPosts(keys, options, selfUserLoader, postLikedLoader);
   });
   return {
     selfUserLoader,

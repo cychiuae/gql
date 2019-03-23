@@ -10,3 +10,9 @@ CREATE TABLE "post" (
   author_id TEXT NOT NULL REFERENCES "user"(id),
   content TEXT NOT NULL
 );
+
+CREATE TABLE "user_likes_post" (
+  user_id TEXT NOT NULL REFERENCES "user"(id),
+  post_id TEXT NOT NULL REFERENCES post(id),
+  PRIMARY KEY(user_id, post_id)
+);

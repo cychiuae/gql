@@ -13,6 +13,7 @@ type Post {
   id: ID!
   author: User!
   content: String!
+  liked: Boolean!
 }
 
 input SignupInput {
@@ -32,4 +33,6 @@ type Mutation {
   login(username: String!, password: String!): SelfUser!
 
   createPost(content: String!): Post!
+  likePost(id: ID!): Post!
+  unlikePost(id: ID!): Post!
 }

@@ -163,11 +163,50 @@ async function getAllPosts(_args: never, context: Context): Promise<Post[]> {
   return posts;
 }
 
+async function likePost(args: { id: string }, context: Context): Promise<Post> {
+  const { id: postId } = args;
+  const { req } = context;
+  const userId = await ensureUserId(req);
+  const post = await inTxn(async client => {
+    const stmt = `INSERT INTO user_likes_post (user_id, post_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`;
+    const values = [userId, postId];
+    await client.query(stmt, values);
+    const { postLoader } = makeLoaders({ userId, client });
+    return postLoader.load(postId);
+  });
+  return post;
+}
+
+async function unlikePost(
+  args: { id: string },
+  context: Context
+): Promise<Post> {
+  const { id: postId } = args;
+  const { req } = context;
+  const userId = await ensureUserId(req);
+  const post = await inTxn(async client => {
+    const { sql, bindings } = knex("user_likes_post")
+      .where({
+        user_id: userId,
+        post_id: postId,
+      })
+      .del()
+      .toSQL()
+      .toNative();
+    await client.query(sql, bindings);
+    const { postLoader } = makeLoaders({ userId, client });
+    return postLoader.load(postId);
+  });
+  return post;
+}
+
 export const rootValue = {
   signup,
   login,
   getSelf,
   createPost,
+  likePost,
+  unlikePost,
   getMyPosts,
   getAllPosts,
 };

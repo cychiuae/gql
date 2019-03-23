@@ -31,6 +31,7 @@ export interface CreatePostInput {
 
 export interface Post {
   id: string;
-  author: () => Promise<User>;
   content: string;
+  author: () => Promise<User>;
+  liked: () => Promise<boolean>;
 }
