@@ -1,6 +1,7 @@
 import babel from "rollup-plugin-babel";
 import commonjs from "rollup-plugin-commonjs";
 import resolve from "rollup-plugin-node-resolve";
+import { string } from "rollup-plugin-string";
 import pkg from "./package.json";
 
 const extensions = [".mjs", ".js", ".jsx", ".ts", ".tsx"];
@@ -10,6 +11,9 @@ const deps = Object.keys(pkg.dependencies || {}).concat(
 );
 
 const plugins = [
+  string({
+    include: "**/*.graphql",
+  }),
   babel({
     extensions,
     exclude: "node_modules/**",

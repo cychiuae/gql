@@ -1,5 +1,6 @@
 import express from "express";
 import cookieParser from "cookie-parser";
+import graphqlHTTP from "express-graphql";
 import {
   errorHandler,
   asyncHandler,
@@ -9,16 +10,22 @@ import {
 import { inTxn } from "./db";
 import { hashPassword, comparePassword } from "./password";
 import { makeToken } from "./jwt";
+import { schema, rootValue } from "./graphql";
 
 const server = express();
 server.use(express.json());
 server.use(cookieParser());
-
-server.get(
-  "/",
-  asyncHandler(async (_req, res) => {
-    res.send("Hello, World");
-  })
+server.use(
+  "/graphql",
+  graphqlHTTP(async (req, res, _graphqlParams) => ({
+    schema,
+    rootValue,
+    context: {
+      req,
+      res,
+    },
+    graphiql: true,
+  }))
 );
 
 server.post(
