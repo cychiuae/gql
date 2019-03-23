@@ -1,5 +1,6 @@
 type SelfUser {
-  username: ID!
+  id: ID!
+  username: String!
 }
 
 type Query {

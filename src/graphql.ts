@@ -1,4 +1,5 @@
 import { buildSchema } from "graphql";
+import { ulid } from "ulid";
 // @ts-ignore
 import schemaString from "./schema.graphql";
 import {
@@ -6,7 +7,7 @@ import {
   writeAccessToken,
   readAccessTokenFromRequest,
 } from "./express";
-import { inTxn } from "./db";
+import { inTxn, knex } from "./db";
 import { hashPassword, comparePassword } from "./password";
 import { makeToken, extractUserId } from "./jwt";
 import { makeLoaders } from "./dataloader";
@@ -18,14 +19,21 @@ async function signup(args: SignupInput, context: Context): Promise<SelfUser> {
   const { username, password } = args;
   const { req, res } = context;
   ensureNoAccessToken(req, res);
-  const token = await makeToken(username);
+  const userId = ulid();
+  const token = await makeToken(userId);
   const selfUser = await inTxn(async client => {
-    const stmt = `INSERT INTO "user" (username, password) VALUES ($1, $2)`;
     const hashed = await hashPassword(password);
-    const values = [username, hashed];
-    await client.query(stmt, values);
-    const { selfUserLoader } = makeLoaders({ userId: username, client });
-    return selfUserLoader.load(username);
+    const { sql, bindings } = knex("user")
+      .insert({
+        id: userId,
+        username,
+        password: hashed,
+      })
+      .toSQL()
+      .toNative();
+    await client.query(sql, bindings);
+    const { selfUserLoader } = makeLoaders({ userId, client });
+    return selfUserLoader.load(userId);
   });
   writeAccessToken(res, token);
   return selfUser;
@@ -35,21 +43,27 @@ async function login(args: LoginInput, context: Context): Promise<SelfUser> {
   const { username, password } = args;
   const { req, res } = context;
   ensureNoAccessToken(req, res);
-  const token = await makeToken(username);
-  const selfUser = await inTxn(async client => {
-    const stmt = `SELECT password from "user" where username = $1`;
-    const values = [username];
-    const { rows } = await client.query(stmt, values);
+  const [selfUser, token] = await inTxn(async client => {
+    const { sql, bindings } = knex
+      .select("id", "password")
+      .from("user")
+      .where({
+        username,
+      })
+      .toSQL()
+      .toNative();
+    const { rows } = await client.query(sql, bindings);
     if (rows.length <= 0) {
       throw new Error("invaid credentials");
     }
-    const hashed = rows[0].password;
+    const { password: hashed, id: userId } = rows[0];
+    const token = await makeToken(userId);
     const result = await comparePassword(password, hashed);
     if (!result) {
       throw new Error("invaid credentials");
     }
-    const { selfUserLoader } = makeLoaders({ userId: username, client });
-    return selfUserLoader.load(username);
+    const { selfUserLoader } = makeLoaders({ userId, client });
+    return Promise.all([selfUserLoader.load(userId), token]);
   });
   writeAccessToken(res, token);
   return selfUser;

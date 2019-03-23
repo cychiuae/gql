@@ -38,13 +38,13 @@ async function loadSelfUsers(
 ): Promise<SelfUser[]> {
   const { client } = options;
   const { sql, bindings } = knex
-    .select("username")
+    .select("id", "username")
     .from("user")
-    .whereIn("username", keys)
+    .whereIn("id", keys)
     .toSQL()
     .toNative();
   const { rows } = await client.query(sql, bindings);
-  const output = makeOutput("username", keys, rows);
+  const output = makeOutput("id", keys, rows);
   return output;
 }
 
